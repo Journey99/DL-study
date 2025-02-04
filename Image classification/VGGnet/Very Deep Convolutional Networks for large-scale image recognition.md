@@ -6,7 +6,6 @@
 > - 발표 연도 : 2014
 > - 한줄 요악 : 3x3 Conv filter를 여러개 쌓아 기존 CNN 모델의 layer 개수를 deep하게 늘렸고, 이것이 대규모 이미지 인식에서 좋은 결과를 얻게 함
 
-
 ## VGGNet?
 VGGNet은 OxFord대학교의 Visual Geometry Group이 개발한 CNN Network이다. 비록 2014년 ILSVRC에서 2위에 그쳤지만 이해하기 쉬운 간단한 구조로 되어있고 변형이 용이하기 때문에 같은 대회에서 1위를 차지한 GoogleNet보다 더 많이 활용되고 있다.
 
