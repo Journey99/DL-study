@@ -11,12 +11,12 @@ VGGNet은 OxFord대학교의 Visual Geometry Group이 개발한 CNN Network이�
 
 CNN Network의 성능을 향상시키는 가장 기본적인 방법은 망의 깊이를 늘리는 것이다. VGGNet은 이러한 망 깊이가 따른 네트워크의 성능변화를 확인하기 위해 개발된 네트워크이다. 논문에서는 동일한 컨셉의 깊이가 다른 6가지 구조에 대해 발표하였고 성능을 비교했다.
 
-![vggnet-2](../Img/vggnet-2.jpg)*[VGGNet16 Architecture]*
+![vggnet-2](Img/vggnet-2.jpg)*[VGGNet16 Architecture]*
 
 ## 모델 구조
 VGG 모델은 딥러닝 기반 컴퓨터 비전 시대를 열었던 AlexNet(2012)의 8-layers 모델보다 깊이가 2배 이상 깊은 네트워크다. 이를 통해 ImageNet Challenge에서 AlexNet의 오차율을 절반(16.4 > 7.3)으로 줄였다. 오차율을 줄일 수 있던 이유는 모든 합성곱 레이어에서 **3x3 필터**를 사용했기 때문이다.
 
-![vggnet-0](../Img/vggnet-0.png)
+![vggnet-0](Img/vggnet-0.png)
 
 ### ARCHITECTURE / CONFIGURATIONS
  
@@ -43,7 +43,7 @@ VGG 모델은 딥러닝 기반 컴퓨터 비전 시대를 열었던 AlexNet(2012
 
 <br>
 
-![vggnet-1](../Img/vggnet-1.jpg)
+![vggnet-1](Img/vggnet-1.jpg)
 
 Depth에 따라 모델 구조가 조금씩 변형되었으며, 11 depth인 A 구조에서부터 19 depth인 E구조까지 있다. 우리가 흔히 사용하는 것은 D(vggnet16) 와 E(vggnet19) 이다.    
 기존의 7x7 사이즈보다 작은 크기의 필터를 사용함으로써 상당수의 파라미터를 줄일 수 있었다. 그럼에도 불구하고 최종단의 Fully connected layer로 인해 상당수의 파라미터가 존재하고 있다.
@@ -64,7 +64,7 @@ VGGNet은 depth가 늘어남에도 더 큰 conv layer를 사용한 얕은 신경
 ## Discussion
 ### 🌟 3x3 conv filter를 사용하면 좋은 점은?
 #### 1. **비선형성  증가**
-![vggnet-3](../Img/vggnet-3.png)
+![vggnet-3](Img/vggnet-3.png)
 - 위의 그림을 보면 3x3 conv filter 2개 사용하는 것이 5x5 conv filter 1개 사용하는 것과 같다. 같은 논리로 3x3 conv filter 3개 사용하는 것이 7x7 conv filter 1개 사용하는 것과 같다.
 - conv filter를 통과하고 나면 ReLU 함수를 적용하게 되는데 3x3필터를 사용하게 되면 5x5/7x7필터보다 **ReLU함수를 더 많이 거치게 되고 그렇기 때문에 비선형성이 증가하고 모델이 깊어진다**.
     - 비선형성이 증가한다는 것은 그만큼 복잡한 패턴을 좀 더 잘 인식할 수 있게 된다.
@@ -79,13 +79,13 @@ VGGNet은 depth가 늘어남에도 더 큰 conv layer를 사용한 얕은 신경
 
 ### 🌟 1x1 conv filter를 사용하는 이유는?
 #### 1. **Channel 수 조절**
-![vggnet-4](../Img/vggnet-4.png)
+![vggnet-4](Img/vggnet-4.png)
 - 1x1 conv filter는 위의 그림과 같이 채널 수를 조절할 때 사용한다
 - filter의 개수를 input의 dimension보다 작게하여 채널 수를 조절 할 수 있다.
 - output의 dimension은 달라지지만, 기존 이미지의 가로 세로 사이즈는 그대로 유지할 수 있다
 
 #### 2. 연산량 감소
-![vggnet-5](../Img/vggnet-5.png)
+![vggnet-5](Img/vggnet-5.png)
 - 1번의 채널 갯수의 감소는 직접적으로 연산량 감소로 이어진다
 - 위의 그림처럼 1x1 conv filter를 사용하게 되면 연산량이 많이 줄어드는 것을 볼 수 있다.
 - 연산량도 줄이고 네트워크를 구성할 때 좀 더 깊게 구성할 수 있다.
@@ -97,7 +97,7 @@ VGGNet은 depth가 늘어남에도 더 큰 conv layer를 사용한 얕은 신경
 
 
 ## 결론
-![vggnet-6](../Img/vggnet-6.png)
+![vggnet-6](Img/vggnet-6.png)
 데이터셋은 ILSVRC-2012를 사용하였고 validation set을 test set으로 사용하여 실험했다고 한다. 결과는 ILSVRC2014에서 좋은 결과(2등)을 얻었다.  
 결론적으로 VGGNet은 성능이 좋은 deep CNN모델로 그 구조가 간단하여 이해나 변형이 쉬운 분명한 장점을 갖고 있기는 하지만, 파라미터의 수가 엄청나게 많기 때문에 학습 시간이 오래 걸린다는 분명한 약점을 갖고 있다.
 실험에서 네트워크의 깊이를 최대 19 레이어(VGG-19)까지만 사용했는데 그 이유는 해당 실험의 데이터에서는 분류 오차율이 VGG-19에서 수렴했기 때문이다. 학습 데이터 세트가 충분히 많다면 더 깊은 모델이 더 유용할 수도 있다.
