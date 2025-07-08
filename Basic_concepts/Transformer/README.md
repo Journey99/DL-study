@@ -14,6 +14,14 @@ Self-Attention 매커니즘 기반으로 문장의 의미를 이해하고 생성
 > 같은 문장 내에서, 즉 입력으로 들어온 시퀀스 안에서 단어들 간의 관계를 고려하는 것이다. 
 
 ![scaled dot-product attention](./Img/trans-3.png)
+
+#### [Self-attention 과정]
+1. 입력 임베딩 : 각 입력 단어를 고정된 크기의 벡터로 변환
+2. Q, K, V 벡터 생성 : 각 입력 벡터는 q,k,v 벡터로 변환됨
+3. 어텐션 스코어 계산 : query와 key 벡터의 내적을 통해 각 단어 쌍 간의 어텐션 스코어를 계산
+4. 소프트 맥스 적용 : 어텐션 스코어에 소프트맥스를 적용해 확률 분포로 변환
+5. 가중합 계산 : 각 value 벡터에 소프트맥스 확률을 곱해 가중함을 구함
+
 #### [Attention과 Self-attention 차이]
 ![](./Img/trans-2.png)
 - Attention : 디코더로부터 query가 나오고 인코더로부터 key와 value값이 나와서 인코더와 디코더 사이의 상관관계를 바탕으로 특징을 추출
@@ -30,6 +38,7 @@ Self-Attention 매커니즘 기반으로 문장의 의미를 이해하고 생성
 ### (4) Positional Encoding
 > Transformer는 RNN처럼 순차처리를 하지 않기 때문에 입력 순서 정보를 알 수 없다. 그래서 토큰의 위치 정보를 인위적으로 추가해줘야 한다. Embedding dimension과 같은 크기를 가지는 위치 정보를 담고 있는 벡터가 positional encoding이다. 
 
+![alt text](./Img/trans-5.png)
 #### 고려해야할 조건
 1. 위치 정보를 추가하는 것이 토큰 임베딩을 약간 수정해야 한다
     - 만약 위치 정보를 추가함에 따라 같은 단어의 뜻이 완전히 달라진다면, 모델은 단어의 뜻을 학습하지 못한다
@@ -52,12 +61,12 @@ Self-Attention 매커니즘 기반으로 문장의 의미를 이해하고 생성
 2. 데이터를 인코더에 입력한다
    1. Multi-head self attention을 수행한다
    2. Residual connection & Layer Normalization 을 수행한다
-   3. feed forward network를 통과한다
+   3. feed forward network를 통과한다 (비선형 변환 수행)
    4. residual connection & layer normalization 을 수행한다
 3. 인코더의 출력을 입력삼아, 인코더 n개를 모두 통과한다
 4. 디코더의 입력을 임베딩하고, positional encoding 정보를 더해준다
 5. 데이터를 디코더에 입력한다
-   1. masked multi-head self attention을 수행한다
+   1. masked multi-head self attention을 수행한다 (미래의 단어를 보지 않도록 마스킹 처리)
    2. residual connection & layer normalization을 수행한다
    3. 인코더의 출력과 Multi-head cross attention을 수행한다
    4. residual connection & layer normalization을 수행한다
@@ -65,4 +74,3 @@ Self-Attention 매커니즘 기반으로 문장의 의미를 이해하고 생성
    6. residual connection & layer normalization을 수행한다
 6. 디코더로 n개를 모두 통과한다
 7. linear 계층과 softmax를 통과하여, 디코더 입력에 이어질 단어를 출력한다
-
