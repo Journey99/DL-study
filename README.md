@@ -1,8 +1,19 @@
 # Deep Learning Study
 딥러닝의 기본개념부터 분야에 따라 모델을 탐구하고 코드까지 완성해보자.
 
+## 프로젝트 구조
+### Basic_concepts
+- CNN 기본 개념
+- Transformer
+
+
+### Image classification
+- ResNet
+- VGGNet
+- ViT 
+- Swin Transformer
+  
 ### pytorch_tutorial
-```
 - 텐서
 - Dataset과 Dataloader
 - Transform
@@ -10,6 +21,6 @@
 - Autograd
 - Optimization
 - 모델 저장 및 불러오기
-```
+
 
 
