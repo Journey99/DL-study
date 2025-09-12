@@ -147,7 +147,7 @@
 - 한계: 작은 물체, 인접한 물체에 약함 → 이후 Anchor box, FPN 도입으로 개선.
 
 ### 2. Anchor Box
-![alt text](image.png)
+![alt text](./Img/image.png)
 - 등장: yolov2부터
 - 개념 : 다양한 크기와 비율의 박스를 미리 정의(anchor)해 두고, 실제 박스를 anchor를 기준으로 보정하는 방식
   - 모델의 예측 단계에서 사용할 기준이 되는 박스를 제공하는 것이며, 다양한 스케일의 객체를 탐지할 수 있게 한다
@@ -156,3 +156,48 @@
   - YOLOv2: k-means 클러스터링으로 Anchor 자동 학습.
   - YOLOv3: 3개의 다른 스케일에서 Anchor 사용 (multi-scale).
   - YOLOv4 이후: PANet/FPN과 결합하여 작은 물체 성능 강화.
+
+### 3. Multi-scale Feature 
+#### (1) multi-scale feature 가 필요한 이유는? 
+- 문제 : 이미지 내 객체들은 크기가 매우 다양하다
+- cnn의 특성
+  - 낮은 레이어(shallower)는 해상도가 높고 세밀한 공간 정보를 잘 보존 -> 작은 객체에 유리
+  - 깊은 레이어(deeper)는 receptive field가 커서 넓은 문맥/semantic 정보를 담음 -> 큰 객체에 유리
+  - 그렇기 때문에 하나의 레이어만으로는 모든 스케일을 잘 잡기 어렵다 -> 여러 해상도의 feature를 결합해야 한다
+
+#### (2) 기본 아이디어 : 피라미드 형태의 특징 (Feature Pyramid)
+![alt text](./Img/image-1.png)
+Feature Pyramid란 객체 인식에 필요한 feature 들을 담고 있는 다양한 스케일의 feature map들을 말한다. 이미지에 포함된 객체들의 크기에 따라 다른 해상도의 feature map을 사용하는 것은 정확도에 큰 도움이 되지만, 문제는 이렇게 다양한 해상도의 feature map을 여러 개 만드는 것이 많은 컴퓨팅 자원을 요구한다는 것이다.
+
+- (a) 각기 다른 크기의 입력 이미지로 여러 가지 크기의 Feature map들을 만드는 것으로 overfeat에서 사용된 방법으로, 가장 많은 메모리와 실행시간을 요구한다
+- (b) 전체 신경망을 통과하여 완전히 압축된 feature map을 하나만 사용할 수 있는데 yolo가 사용한 방법으로 속도는 가장 빠르지만 성능이 떨어지게 된다
+- (c) SSD에서는 처음으로, 합성곱 신경망을 통과하며 생성되는 다양한 스케일의 feature map들을 사용해 적은 연산량으로 pyramid와 유사한 계층적 구조의 예측을 수행했다. 그러나 이 방법을 사용하면 고해상도 feature map에는 low-level feature들이 담기기 때문에, small object detection 성능이 떨어지게 된다.
+- (b) Feature Pyramid Network에서는 합성곱 신경망에서 자연스럽게 생성되는 feature map들을 활용하여 연산량을 적게 유지하면서도, 예측을 위한 적절한 정보들을 포함한 feature pyramid를 만든다.
+
+#### (3) FPN(Feature Pyramid Network) - 핵심 메커니즘
+![alt text](./Img/image-2.png)
+
+FPN은 한 개의 이미지를 입력으로 받아, 여러 가지 스케일의 feature map을 생성한다. 이때, 앞쪽 합성곱 계층에서 생성된 높은 해상도의 feature map 일수록 더 low-level feature들을 포함하고 있기에, 이 feature map들에 뒤쪽 feature map을 fusion하여 high-level한 sementic 정보들을 전달해준다.
+(top-dwon + lateral connection)
+
+
+#### (4) PANet (Path Aggregation Network) — FPN 개선
+![alt text](./Img/image-3.png)
+- PANet에서 연산은 위 이미지에서 (a)까지는 FPN과 동일하게 수행한다.
+- 그리고 (b)처럼 Bottom-up 방식으로 쌓아가는데, Ni는 Pi에 대응해 다운 샘플링을 통해 생성된 값이다. 
+- Ni를 3x3 conv (stride=2)를 통과해 나온 값과 Pi+1을 더해서 새롭게 Ni+1을 생성하는 방식으로 Bottom-up을 추가해간다.
+
+[핵심]
+- FPN은 top-down 경로만 존재 → semantic 정보를 하류로 보냈음. PANet은 bottom-up 경로를 추가해 low-level에서 보강된 정보를 다시 상위 레벨로 전달함.
+- 결과적으로 정보 흐름(semantic ↔ spatial)이 더 풍부해져 물체 위치 정밀도와 작은 객체 성능 개선에 도움.
+
+#### (5) BiFPN (Bidirectional FPN) — EfficientDet에서 도입
+![alt text](./Img/image-4.png)
+
+[핵심]
+- 양방향 + 가중치 합성 (weighted feature fusion): 서로 다른 입력(feature들)을 단순 add가 아니라 학습 가능한 가중치로 합친다.
+- 각 노드에서 out = sum_i (w_i * feat_i) / (epsilon + sum_i w_i) 형태로 안정화된 가중치 합을 사용.
+
+[장점]
+- 여러 입력(예: P3, P4, P5)을 결합할 때 각 입력의 중요도를 모델이 학습하도록 함 → 더 유연한 피처 융합.
+- 연속적인 반복(Repeated BiFPN)으로 더 강력한 피처 상호작용 가능.
