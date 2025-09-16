@@ -201,3 +201,82 @@ FPN은 한 개의 이미지를 입력으로 받아, 여러 가지 스케일의 f
 [장점]
 - 여러 입력(예: P3, P4, P5)을 결합할 때 각 입력의 중요도를 모델이 학습하도록 함 → 더 유연한 피처 융합.
 - 연속적인 반복(Repeated BiFPN)으로 더 강력한 피처 상호작용 가능.
+
+### 4. Loss Functions
+객체 탐지 모델은 크게 세 가지 예측을 동시에 한다.
+1. 분류 : 어떤 클래스인지
+2. 위치 : 바운딩 박스 좌표가 정확히 어딘지
+3. confidence(objectness/foreground vs background) : 해당 박스가 실제 물체를 포함하는지
+
+#### (1) 초창기(yolov1, ssd)
+- 분류 : cross-entropy loss
+- 바운딩 박스 : mse -> 박스 크기 차이에 민감하지 않아서 작은 객체에 불리
+- objectness : IOU 기준 p/n 할당 후 confidence 예측
+
+#### (2) IoU 기반
+- MSE 대신 IoU 기반 손실을 사용 -> 더 직관적이고 성능 향상
+- 하지만 IoU = 0 이면 gradient가 0이 되어 학습 불안정
+
+#### (3) 개선된 IoU 계열
+작은 객체 / 박스 위치 정밀도 개선을 위해 도입되었다.
+1. GIoU (Generalized IoU)
+   - IoU = 0 이어도 gradient 살아 있음
+
+![alt text](./Img/image-5.png)
+
+2. DIoU (Distance IoU)
+- 중심점 거리까지 고려 -> 박스가 멀리 떨어져 있으면 패널티
+3. CIoU (Complete IoU)
+- aspect ratio(종횡비)까지 고려 -> 더 안정적이고 빠른 수렴
+
+> YOLO v4, v5 이후는 보통 GIoU/DIoU/CIoU 중 하나를 사용.
+
+#### (4) 분류 손실 개선 (class imbalance 문제 해결)
+one-stage detector가 two-stage detector에 비해 가지고 있는 문제점은 학습 중 class imbalance(클래스 불균형) 문제가 심하다는 것이다. 
+예를 들어, 학습 중 배경에 대하여 박스를 친 것과 실제 객체에 대하여 박스를 친 것의 비율을 살펴보면 압도적으로 배경에 대하여 박스를 친 것이 많다. 학습 중에서 배경에 대한 박스를 출력하면 오류라고 학습되지만 그 빈도수가 너무 많다는 것이 학습에 방해가 된다는 뜻이다.
+
+클래스 불균형 문제는 다음 2가지 문제의 원인이 된다.
+1. 대부분의 location은 학습에 기여하지 않는 easy negative이므로 학습에 비효율적이다
+2. easy negative 각각은 높은 확률로 객체가 아님을 잘 구분할 수 있다. 즉, 각각의 loss값은 작다. 하지만 비율이 굉장히 크므로 전체 loss 및 gradient를 계산할 때, easy negative의 영향이 압도적으로 커지는 문제가 발생한다.
+
+이러한 문제를 개선하기 위해 focal loss 개념이 도입!
+
+[Focal loss]
+- cross entropy의 클래스 불균형 문제를 다루기 위한 개선된 버전
+- 어렵거나 쉽게 오분류되는 케이스에 대하여 더 큰 가중치를 주는 방법
+- 쉬운 케이스의 경우 낮은 가중치를 반영
+
+#### (5) 최근 추세
+- Varifocal Loss (YOLOX, YOLOv7 등 일부 활용):
+classification과 IoU를 함께 고려해 confidence score를 더 정교하게 학습.
+
+- Distribution Focal Loss (DFL): bounding box regression을 단일 값이 아닌 확률 분포로 모델링. → GIoU/DIoU와 조합 가능.
+
+
+### 5. Anchor-free
+#### (1) Anchor-based 방식의 한계
+YOLO, SSD, Faster R-CNN 초기 버전들은 Anchor box를 사용
+- 미리 정의된 다양한 크기/비율 박스를 각 위치(feature map cell)에 배치
+- GT 박스와 IoU를 계산해 positive/negative match → 학습
+
+[문제점]
+- anchor 크기/비율 hyperparameter 튜닝 필요
+- 작은 객체나 극단적인 aspect ratio 객체는 anchor가 잘 맞지 않을 수 있음
+- 수천 개 anchor → 계산량 증가
+
+#### (2) Anchor-free 방식의 아이디어
+
+![alt text](./Img/image-6.png)
+
+- feature extraction 과정까지는 기본과 같지만 각 cell마다 anchor를 사용하지 않고, 바로 bounding box나 class를 classification 하는 과정을 거친다
+- 위 그림에서 그라운드 박스가 파란색 cell이라고 하면, gt bounding box에 속하는 cell들은 positive 샘플로 할당하고, 속하지 않는 것은 negative 샘플로 할당한다
+- 픽셀 단위의 feature point를 직접 예측
+
+#### (3) Anchor-free 장점 & 단점
+- 장점
+  - 튜닝 불필요 (anchor 크기/비율 미리 정할 필요 없음)
+  - 작은 객체 / 특이한 종횡비 객체도 자연스럽게 처리
+  - 구조 단순화 -> 추론 속도 개선 가능
+- 단점
+  - Positive/Negative sample 정의가 더 어렵다 (IoU 대신 center sampling 등 다양한 전략 필요)
+  - 초기엔 AP 낮았으나 최근에는 anchor-based와 성능 차이 거의 없음 (YOLOv8 이후).
