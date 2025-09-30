@@ -12,7 +12,15 @@
 - VGGNet
 - ViT 
 - Swin Transformer
-  
+
+### Object detection
+- Two stage model
+  - rcnn, fast-rcnn, faster-rcnn
+- One stage model
+  - yolov1 ~
+- Transformer model
+  - dino, dert
+
 ### pytorch_tutorial
 - 텐서
 - Dataset과 Dataloader
