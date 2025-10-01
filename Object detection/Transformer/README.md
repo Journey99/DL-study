@@ -3,6 +3,7 @@
 > - CNN 기반의 한계
 >   - 고정된 receptive field -> global context 부족
 >   - anchor 기반 방식의 복잡성
+>       - 하나의 gt에 대하여 여러개의 bbox가 있음
 >   - multi-scale feature에 대한 의존성
 >
 > [Transformer의 장점]
@@ -50,13 +51,75 @@ transformer의 결과로 나온 n개의 Unit은 FFN을 통과하여 class와 bou
 ### Original Transformer vs DETR Transformer
 1. positional encoding 하는 위치가 다르다.
 - CNN Backbone으로 뽑아낸 feature matrix d×HW에는 위치 정보가 소실되어있다. 기존의 Transformer도 이와 같은 문제점을 해결하기 위해 Positional encoding을 더해주었다. DETR도 마찬가지로 Positional encoding을 더해주는데 위치가 살짝 다르다.
-![alt text](image.png)
+![alt text](./Img/image2.png)
 2. Autoregression이 아닌 Parallel 방식으로 output을 출력한다.
 - 기존 transformer는 단어 한 개씩 순차적으로 출력값을 내놓는다. autoregression은 현재 output값을 출력하기 위해 이전 단계까지 출력한 output값을 참고하는 방식이다. 반면 DETR에서 사용한 transformer는 paralle 방식으로, 즉 모든 Output값을 통채로 출력하는 방식이다.
 
 ### Main idea
 #### 1. Object Query
+Object query는 DETR만의 독특한 구성 요소다.
+- 각 쿼리는 하나의 객체를 예측하기 위한 학습 가능한 벡터다
+- cnn backbone에서 추출한 feature map을 transformer encoder가 처리하고, decoder는 고정 개수(n개) object query를 입력받아 각 query가 하나의 objcet 후보를 예측하도록 한다.
+- 쿼리는 transformer 디코더에 입력되며, 이미지의 feature들과 상호 작용하며 관련된 객체 정보를 뽑아낸다
+
+즉, object query는 "이 쿼리는 이미지 속의 어떤 객체를 예측해줘" 라는 요청 역할을 수행하는 셈이다. 이 개수는 고정되어 있고, 학습을 통해 쿼리마다 특정 유형의 객체를 탐지하도록 자연스럽게 분화된다. query는 학습 가능한 embedding이므로, 네트워크가 어떤 물체를 찾을지 "자율적으로" 학습하게 된다.
+
 
 #### 2. Bipartite Matching (Hungarian Algorithm)
+DETR에서는 디코더가 고정된 수의 오브젝트 쿼리(Object Queries)를 입력받아, 각 쿼리에 대해 객체의 클래스와 바운딩 박스를 예측한다. 예를 들어, 100개의 쿼리를 사용하는 경우라면 매 예측 시점마다 100개의 객체 후보가 생성된다. 하지만 실제 이미지에는 객체가 5개만 있을 수도 있고, 12개일 수도 있다. 즉, 예측 결과와 실제 정답의 수가 다르며, 순서도 전혀 일치하지 않는다. 이처럼 예측된 값과 실제 값의 수가 다르고 일대일 대응이 불분명한 상황에서, 각 예측값이 어떤 실제 객체를 예측하려 한 것인지 매칭해주는 과정이 필요하다.
+
+이를 위해 DETR은 헝가리안 알고리즘을 사용한다. 헝가리안 알고리즘은 예측값과 정답 간의 매칭 비용(Matching Cost)을 최소화하는 방식으로, 가장 효율적인 1:1 매칭을 찾아주는 최적화 알고리즘이다.
+
+![alt text](./Img/image3.png)
+위 예시에서는 두 사람을 detection할 때, 예측된 bbox를 gt와 매칭시키는 문제이다. 이 때 각 예측된 bbox를 gt에 매칭시킬 경우의 모든 cost는 오른쪽 행렬과 같다. 가운데 그림처럼 1대 1 대응이 될 경우의 총 cost는 32이다.
+
+![alt text](./Img/image4.png)
+하지만 위 가운데 그림처럼 1대 1 대응이 된다면 총 cost는 12가 된다. 헝가리안 알고리즘은 이렇게 cost에 대한 행렬을 입력 받아 matching cost가 최소인 permutation을 출력한다. 
+
+[헝가리안 매칭의 장점]
+- 후처리 필요 없음 : 전통적인 객체 검출 모델과 달리, nms (중복 박스 제거 방법) 같은 후처리 과정이 필요 없다
+- 단순한 구조 : 앵커 박스가 필요 없기 때문에 모델 구조가 훨씬 간결해진다
+- 일관된 학습 가능 : 각 예측에 대해 정답과의 매칭이 명확히 정의되므로, 학습 과정이 안정적이고 일관된다
+- 다대다 예측 -> 1:1 매칭으로 : 고정된 수의 쿼리에서 다수의 예측을 하되, 실제 객체와는 정확한 1:1 대응을 찾기 때문에 불필요한 중복 예측이 줄어든다
+
 
 #### 3. Set-based Loss Function
+위의 헝가리안 매칭을 기반으로, 전체 예측 세트를 gt세트와 동일한 크기로 보고 Loss를 정의. 
+핵심은 중복 박스가 나오지 않도록 set 단위로 예측을 한다.
+
+Loss 구성
+- Classification Loss (예측 class vs. GT class)
+- Bounding Box Regression Loss (L1)
+- Generalized IoU Loss
+
+### 특징 맟 장단점
+- Anchor-free
+- Set prediction + bipartite matching loss
+- COCO dataset에 대해서 Faster R-CNN baseline 급의 정확도와 런타임 성능을 보여줌
+- end-to-end training이 가능
+- 아주 간단명료한 구조 + 깔끔한 코드
+- Simple but 학습 느리고 작은 물체에 대한 성능이 매주 낮음
+
+
+---
+
+
+## Deformable DETR
+### 논문 정보
+> - 논문 제목 : Deformable DETR: Deformable Transformers for End-to-End Object Detection
+> - 모델 이름 : Deformable DETR
+> - 발표 연도 : 2020 (arXiv, MSRA / Microsoft Research Asia)
+> - 한줄 요약 : 기존 DETR의 느린 수렴 속도와 대규모 데이터 필요 문제를 해결하기 위해 Deformable Attention을 도입하여, multi-scale feature를 효과적으로 활용한 개선된 Transformer 기반 Object Detection 모델
+
+본 논문은 DETR의 후속 연구이다. 기존 DETR은 transformer 구조를 object detection에 도입하면서, cnn으로 구성되는 object detection의 패러다임을 전환하였다. 하지만 기존 DETR은 2가지 제한점이 존재했다.
+- 수렴 속도가 너무 느림
+- 작은 object에 대한 낮은 성능
+
+DETR을 수렴하려고 학습시키면 적어도 500Epoch정도는 돌아야 한다. 이에 따른 낮은 수렴 속도에 대한 제한점은 DETR 원문에도 작성되어 있다.
+그리고 CNN에서도 그랬듯이, 높은 해상도에서 Feature를 추출해야 작은 객체에 대한 Detection 성능이 올라가는데, Transformer 구조상 높은 해상도에서 Attention을 수행하면 계산복잡도와 메모리 사용량이 기하급수적으로 올라간다. 
+
+본 논문에서는 이러한 제한점을 극복하기 위해, Deformable Convolution에 대한 메커니즘을 도입했다. 
+
+
+### Network Architecture 
+![alt text](./Img/image5.png)
