@@ -11,6 +11,21 @@
 > - anchor-free 방식과 잘 맞음
 > - end-to-end 학습으로 pipiline 단순화
 
+## Transformer 핵심
+| 구분 | Self-Attention | Cross-Attention |
+|------|----------------|----------------|
+| **Q, K, V의 출처** | 모두 **같은 feature set** | Q는 **다른 source**, K/V는 **다른 feature set** |
+| **목적** | 같은 feature들 간의 **내적 관계 학습 (context understanding)** | 한 feature set이 **다른 feature set을 참조 (정보 결합)** |
+| **예시 (DETR 기준)** | Encoder에서 **Feature Map 내부의 관계**를 학습 | Decoder에서 **Object Query가 Encoder Feature를 참조** |
+| **비유** | “내 생각 안에서 관계를 정리” | “다른 사람의 생각(정보)을 참고” |
+- **Encoder의 Self-Attention**  
+  → 이미지의 모든 픽셀(또는 patch)이 **서로의 관계를 학습**해서 전역 정보를 얻음.  
+  *(예: 고양이 귀와 몸통이 서로 관련 있음을 학습)*  
+
+- **Decoder의 Cross-Attention**  
+  → 각 **Object Query**가 Encoder의 Feature Map에서 **관련된 영역의 정보만 집중적으로 가져옴**  
+  *(예: “고양이” query는 고양이 영역에 주로 집중)*
+
 
 ## DETR(2020)
 ### 논문 정보
@@ -123,3 +138,32 @@ DETR을 수렴하려고 학습시키면 적어도 500Epoch정도는 돌아야 �
 
 ### Network Architecture 
 ![alt text](./Img/image5.png)
+1. backbone network
+- DETR과 유사하게 cnn backbone network에 Input image를 넣어 feature map을 뽑아낸다. 
+- DETR과 달리 single-scale이 아닌 multi-scale feature map을 사용하게 된다.
+
+2. Encoder
+![alt text](./Img/image6.png)
+- backbone에서 뽑아낸 multi-scale feature map을 바탕으로 Object가 있음직한 reference point를 예측한다. 
+  - reference point : feature 안의 어떠한 한 기준점에서 offset을 얼마나 설정해서 attention을 해야하는지를 결정하는 기준점
+  - reference point = input query (=feature map의 모든 pixel)
+- 예측된 reference point 근처에서 sampling point를 추출하게 되고, 이 sampling point끼리의 attention weight를 계산한다.
+- 계산된 attention weight는 reference point를 개선하는데 사용되며, 다음 layer에서는 개선된 reference point 근처에서 다시 sampling point들을 추출한다. 
+- 이후에는 다시 위 task를 반복한다.
+
+    ![alt text](./Img/image7.png)
+    DETR의 경우 한 위치에서 모든 픽셀에 대해 attention 연산을 수행하는 반면, deformable detr은 한 위치에서 sampling points들에 대해서만 attention 연산을 수행한다. 
+    또한 하나의 scale이 아닌, 다른 모든 scale에서의 pixel에 대해서도 attention 연산을 수행하므로 속도와 여러 크기의 물체에 대해서 DETR보다 성능이 좋다.
+
+3. Decoder
+![alt text](image.png)
+- decoder의 경우, self attention부분과 cross attention하는 부분이 존재한다.
+- self attention은 decoder의 Input인 object query들을 multi-head attention 하여 최적의 매칭을 찾는다.
+- cross attetion은 object query들을 Linear layer에 통과시켜 reference points들을 추출하고 각 reference point에서 sampling points를 뽑아 인코더와 동일한 방식으로 value를 계산한다.
+
+### Main idea
+#### 1. Deformable Attention
+기존 DETR의 문제점은 attention이 너무 global하고 dense하다는 것이다. 즉, 모든 query가 이미지 전체의 모든 위치에 attention을 계산해서 (1) 연산량이 매우 많고 (2) 수렴 속도가 매우 느림 의 문제가 있었다. 그래서 도입된 deformable attention은 각 query가 전체 Feature map을 보지 않고 관심 있어 할 법한 위치 몇 개만 보고 집중하게 했다.
+
+
+#### 2. Multi-Scale Feature Representation
