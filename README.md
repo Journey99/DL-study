@@ -2,7 +2,7 @@
 딥러닝의 기본개념부터 분야에 따라 모델을 탐구하고 코드까지 완성해보자.
 
 ## 프로젝트 구조
-### Basic_concepts
+### Basic concepts
 - CNN 기본 개념
 - Transformer
 
@@ -19,9 +19,9 @@
 - One stage model
   - yolov1 ~
 - Transformer model
-  - dino, dert
+  - dino, detr, deformable detr
 
-### pytorch_tutorial
+### pytorch tutorial
 - 텐서
 - Dataset과 Dataloader
 - Transform

@@ -156,7 +156,7 @@ DETR을 수렴하려고 학습시키면 적어도 500Epoch정도는 돌아야 �
     또한 하나의 scale이 아닌, 다른 모든 scale에서의 pixel에 대해서도 attention 연산을 수행하므로 속도와 여러 크기의 물체에 대해서 DETR보다 성능이 좋다.
 
 3. Decoder
-![alt text](image.png)
+![alt text](./Img/image8.png)
 - decoder의 경우, self attention부분과 cross attention하는 부분이 존재한다.
 - self attention은 decoder의 Input인 object query들을 multi-head attention 하여 최적의 매칭을 찾는다.
 - cross attetion은 object query들을 Linear layer에 통과시켜 reference points들을 추출하고 각 reference point에서 sampling points를 뽑아 인코더와 동일한 방식으로 value를 계산한다.
@@ -165,5 +165,56 @@ DETR을 수렴하려고 학습시키면 적어도 500Epoch정도는 돌아야 �
 #### 1. Deformable Attention
 기존 DETR의 문제점은 attention이 너무 global하고 dense하다는 것이다. 즉, 모든 query가 이미지 전체의 모든 위치에 attention을 계산해서 (1) 연산량이 매우 많고 (2) 수렴 속도가 매우 느림 의 문제가 있었다. 그래서 도입된 deformable attention은 각 query가 전체 Feature map을 보지 않고 관심 있어 할 법한 위치 몇 개만 보고 집중하게 했다.
 
+![alt text](./Img/image9.png)
+Deformable에 대해 설명을 간단하게 하자면 다음과 같다
+- 커널 자체를 convolution으로 학습시켜, offsets(커널의 각 cell이 이동할 위치)을 구한다
+- 커널에 이 offsets을 더해 새로운 커널을 탄생시킨다
+  - 이 새로운 커널들은 기존 커널과 같이 정수의 좌표가 아닌 소수의 좌표!
+
+이렇게 변형된 convolution에서 features 값을 추출하는 것이 deformable convolution이다.
+
+![alt text](./Img/image10.png)
+이 논문의 핵심인 deformable attention을 single-scale에서 어떻게 이루어지는지 보면 위와 같은 구조가 나온다. 이 구조에서 attention score를 구하는 절차는 아래와 같다.
+- Input Feature Map x의 한 픽셀에 출력 차원이 3MK인 Linear Layer를 적용하여 Query Feature z_q를 출력하고 (M: Multi-Head의 수, K: Keys의 수), 2MK, MK를 각각 분할해서 적용
+  - 2MK는 keys에 대한 offsets로 활용. 이 offsets은 정수가 아닌 소수
+  - MK에 K를 기준으로 softmax를 취한 값이 attention weights (A_mqk) 이고 시그마 A_map = 1
+- input feature map x에 linear layer를 적용하여 values를 출력
+
+위에서 위에서 Attention Weight와 Query, Key, Value에 대한 정보가 다 있으니 이제 아래 수식으로 Attention Score를 구한다. 
+![alt text](./Img/image11.png)
+
+본 논문은 Multi-Scale Feature maps에 대해 Deformable Attention을 진행하였기 때문에, 위 Single-Scale를 Multi-Scale로 확장해 준다. 그럼 아래와 같은 식이 나온다.
+![alt text](./Img/image12.png)
+추가된 것은 각 scale feature map에서 Level인 l만 추가 되었다.
 
 #### 2. Multi-Scale Feature Representation
+문제의 배경은 다음과 같다. 객체는 크기가 다양한데 cnn에서 레이어가 깊어질수록 저해상도는 global하고 semantic-rich한 정보를 담고 고해상도는 local하고 detail-rich한 정보를 담게 된다. 이 정보를 한 번에 다루는게 핵심인데 multi-scale feature는 여러 해상도의 feature map을 동시에 사용하여 큰 물체와 작은 물체를 모두 잘 탐지하도록 한다.
+
+구현방식은 아래와 같다.
+
+(1) FPN (Feature Pyramid Network, 2017)
+- CNN 백본의 여러 층의 feature를 결합 (bottom-up + top-down)
+- 각 scale에서 작은/큰 객체 탐지 가능
+- SSD, Faster R-CNN, YOLO 등에서도 기본 구조로 채택됨
+
+(2) Deformable DETR의 Multi-Scale Attention
+- FPN에서 나온 feature pyramid (예: 1/8, 1/16, 1/32)를 Transformer Encoder로 전달
+- Deformable Attention이 여러 스케일 feature map에서 sampling
+- Query는 여러 스케일의 정보를 동시에 활용
+
+작동원리는
+1. backbone(cnn or resnet)에서 multi-level feature 추출
+2. 각 feature map을 transformer encoder 입력으로 전달
+3. deformable attention이 모든 scale을 동시에 참고
+
+
+### 특징 및 장단점
+- 학습 속도 개선 : 기존 DETR보다 10배 빠른 수렴
+- 소규모 데이터에서도 학습 가능
+- 소형 객체 탐지 성능 향상
+- end-to-end 학습 유지
+- sparse attention이라고 해도 여전히 transformer 기반이라 연산량이 크다
+- Anchor-like sampling 위치를 학습해야 하므로 모델이 완전히 anchor-free라고 보기는 어려움
+
+
+---
