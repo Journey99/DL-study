@@ -5,7 +5,7 @@
 ### Basic concepts
 - CNN 기본 개념
 - Transformer
-
+- Foundation model
 
 ### Image classification
 - ResNet
@@ -20,6 +20,10 @@
   - yolov1 ~
 - Transformer model
   - dino, detr, deformable detr
+
+### Segmentation
+- UNet
+- DeepLabv3+
 
 ### pytorch tutorial
 - 텐서
