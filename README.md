@@ -24,6 +24,8 @@
 ### Segmentation
 - UNet
 - DeepLabv3+
+- SegFormer
+- Mask2Former
 
 ### pytorch tutorial
 - 텐서

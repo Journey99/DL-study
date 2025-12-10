@@ -130,3 +130,51 @@
 - Mask2Former (2022): https://arxiv.org/abs/2112.01527  
 - Segment Anything (2023): https://arxiv.org/abs/2304.02643  
 
+
+# ✅ 8) instance segmentation 가능여부
+| 모델 | 원래 용도 | Instance 가능? | 방법 |
+|:-----|:---------|:--------------|:-----|
+| **U-Net** | Semantic Segmentation | ✅ 가능 | Instance head 추가 (Center/Offset/Gradient) |
+| **DeepLabv3+** | Semantic Segmentation | ✅ 가능 | Instance head 추가 or Two-stage 방식 |
+| **SegFormer** | Semantic Segmentation | ✅ 가능 | Instance head 추가 or Post-processing |
+| **Mask R-CNN** | Instance Segmentation | ✅ 원래 가능 | Two-stage design (RPN + ROI Head) |
+| **Mask2Former** | Universal Segmentation | ✅ 원래 가능 | Query-based unified architecture |
+
+### 원래부터 Instance 가능한 모델
+
+| 모델 | 방식 | 장점 | 단점 |
+|:-----|:-----|:-----|:-----|
+| **Mask R-CNN** | Two-stage (Proposal-based) | 높은 정확도, 안정적 | 느림 |
+| **Cascade Mask R-CNN** | Multi-stage refinement | 매우 높은 정확도 | 매우 느림 |
+| **YOLACT** | One-stage (Prototype-based) | 빠름 (30+ FPS) | 정확도 낮음 |
+| **SOLOv2** | One-stage (Location-based) | 빠르고 정확 | 작은 객체 약함 |
+| **Mask2Former** | Query-based Transformer | SOTA, Universal | 무거움 |
+| **OneFormer** | Task-conditional | 하나로 모든 task | 매우 무거움 |
+
+## 도메인별 추천 모델
+
+### 의료 영상 (세포, 핵, 장기)
+
+| 용도 | 추천 모델 | 이유 |
+|:-----|:---------|:-----|
+| **세포 Instance** | U-Net + Gradient (Cellpose) | Round object, touching 처리 우수 |
+| **핵 Instance** | U-Net + HV maps (Hover-Net) | 병리 이미지 특화 |
+| **장기 Semantic** | U-Net, nnU-Net | 검증된 성능 |
+| **작은 데이터셋** | U-Net + Watershed | 간단하고 효과적 |
+
+### 자율주행
+
+| 용도 | 추천 모델 | 이유 |
+|:-----|:---------|:-----|
+| **Scene Understanding** | Mask2Former (Panoptic) | Semantic + Instance 통합 |
+| **실시간 처리** | YOLACT or SegFormer-B0 | 속도 중요 |
+| **최고 정확도** | Cascade Mask R-CNN | 안전 critical |
+
+### 일반 객체 인식
+
+| 용도 | 추천 모델 | 이유 |
+|:-----|:---------|:-----|
+| **연구/프로토타입** | Mask R-CNN | 범용성, 안정성 |
+| **프로덕션** | SOLOv2 or Mask2Former | 속도와 정확도 균형 |
+| **실시간 요구** | YOLACT | 30+ FPS |
+| **Semantic만 필요** | SegFormer | 가볍고 빠름 |
