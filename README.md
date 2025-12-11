@@ -27,6 +27,8 @@
 - SegFormer
 - Mask2Former
 
+### OCR
+
 ### pytorch tutorial
 - 텐서
 - Dataset과 Dataloader
