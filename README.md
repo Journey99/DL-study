@@ -29,6 +29,8 @@
 
 ### OCR
 
+### VLM
+
 ### pytorch tutorial
 - 텐서
 - Dataset과 Dataloader
