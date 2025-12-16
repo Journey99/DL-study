@@ -12,6 +12,8 @@
 - VGGNet
 - ViT 
 - Swin Transformer
+- EfficientNet
+- ConvNeXt
 
 ### Object detection
 - Two stage model
@@ -30,6 +32,7 @@
 ### OCR
 
 ### VLM
+- CLIP
 
 ### pytorch tutorial
 - 텐서
