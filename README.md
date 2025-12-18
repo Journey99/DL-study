@@ -33,6 +33,7 @@
 
 ### VLM
 - CLIP
+- BLIP
 
 ### pytorch tutorial
 - 텐서
