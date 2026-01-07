@@ -3,4 +3,5 @@
 *.tar.gz
 *.zip
 *.pt
+*.pth
 dataset/

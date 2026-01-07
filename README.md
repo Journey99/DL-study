@@ -28,6 +28,7 @@
 - DeepLabv3+
 - SegFormer
 - Mask2Former
+- SAM
 
 ### OCR
 
