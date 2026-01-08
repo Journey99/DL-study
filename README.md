@@ -35,6 +35,7 @@
 ### VLM
 - CLIP
 - BLIP
+- BLIP2
 
 ### pytorch tutorial
 - 텐서

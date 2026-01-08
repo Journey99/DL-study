@@ -4,4 +4,6 @@
 *.zip
 *.pt
 *.pth
+*.jpg
+*.jpeg
 dataset/
