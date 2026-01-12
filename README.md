@@ -36,6 +36,7 @@
 - CLIP
 - BLIP
 - BLIP2
+- LLaVA
 
 ### pytorch tutorial
 - 텐서
