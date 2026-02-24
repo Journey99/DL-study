@@ -37,6 +37,7 @@
 - BLIP
 - BLIP2
 - LLaVA
+  - LLAVA series
 
 ### pytorch tutorial
 - 텐서
