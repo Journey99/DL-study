@@ -21,7 +21,7 @@
 - One stage model
   - yolov1 ~
 - Transformer model
-  - dino, detr, deformable detr
+  - detr, deformable detr, dino, rt-detr
 
 ### Segmentation
 - UNet

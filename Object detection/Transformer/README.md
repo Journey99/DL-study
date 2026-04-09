@@ -218,3 +218,147 @@ Deformable에 대해 설명을 간단하게 하자면 다음과 같다
 
 
 ---
+
+## DINO
+### 논문 정보
+> - 논문 제목 : DINO: DETR with Improved DeNoising Anchor Boxes for End-to-End Object Detection
+> - 모델 이름 : DINO
+> - 발표 연도 : 2022
+> - 한줄 요약 : denoising + contrastive-like 학습으로 DETR의 수렴 속도와 성능을 동시에 끌어올린 모델
+
+DETR은 학습 속도가 느리고, 학습이 수렴할 때 많은 epoch가 필요하다는 문제가 있었다. 또한 DETR이 생성한 bounding box 안에서 찾으려는 객체가 없을 때 혹은 객체가 겹쳐 있을 때, 인지가 제대로 되지 않는다는 문제점이 있었다. DINO는 DETR의 구조를 유지한 채, 학습 안정성과 수렴 속도, 성능을 모두 향상시키기 위해서 다음 3가지 기법을 사용하였다.
+
+### Network Architecture
+![alt text](./Img/image13.png)
+1. 이미지가 주어지면, ResNet이나 Swin Transformer와 같은 백본을 사용하여 다중 스케일 특징을 추출한 후, 이를 해당 positional embeddings과 함께 Transformer 인코더에 입력
+2. mixed query selection strategy
+   1. 디코더의 positional query로 앵커를 초기화하기 위해
+   2. content query를 초기화하지 않고, 학습 가능하게 남겨둠
+3. Deformable Attention
+   1. 인코더 출력의 특징을 결합하고 query를 층별로 업데이트
+4. Contrastive DeNoising Training
+   1. taking into account hard negative samples
+5. look forward twice
+   1. later layers의 정제된 박스 정보를 활용하여 인접 early layer의 매개변수를 최적화하기 위해, adjacent(인접) layers 간의 그라디언트를 전달
+
+### Main idea
+#### 1. Contrastive DeNoising Training (CDN)
+![alt text](./Img/image14.png)
+
+DINO의 가장 핵심적인 기법이다. 기존의 DETR의 모델을 학습할 시 노이즈에 대해서 민감하고, 어떤 데이터가 좋은 데이터인 지 구별을 하는 데 어려움이 있었다. 이를 해결하기 위해서 DINO는 denoising 이라는 학습 방식을 도입하였다. denoising은 2가지의 방식으로 구성된다.
+
+1. Positive Queries : GT 객체의 bounding box와 label을 약간 변형하여 입력한다. 예를 들어 GT box의 좌표에 노이즈를 추가하거나, class label에 약간의 변형을 가한다
+2. Negative Queries: 완전히 잘못된 box나 label을 생성하여 함께 넣는다.
+
+![alt text](./Img/image15.png)
+
+Contrastive Loss는 positive와 negative queries 간의 특징간 거리를 조절하여 다음과 같이 정의한다. 이는 단순히 Bounding Box 회귀와 classification loss만 사용하는 게 아니라, positive는 더 가까이, negetive는 더 멀어지도록 유도하는 것을 도입해서 객체를 더 명확하게 구별하게 해준다.
+
+![alt text](./Img/image16.png)
+
+이를 통해서, 모델이 더 빠르게 수렴하게 되고, 노이즈에 강건한 학습을 할 수 있게 된다.
+
+#### 2. Mixed Query Selection
+기존의 DETR에서는 query가 모두 초기화되며, 학습 초반에는 Detection 성능이 불안전했다. DINO에서는 이를 보완하기 위해서 query를 섞어 사용한다.
+1. Learnable Queries (Anchor Queries)
+   - 고정된 위치에서 학습이 가능한 query들을 초기화한다. DETR는 모두 랜덤하게 초기화 되어 아무런 정보가 없었지만, 고정된 위치에서 초기화 하기 때문에 기존의 특징을 가지고 있어 anchor box처럼 특정 영역을 담당하게 유도된다.
+2. Random Queries
+   - 무작위의 query를 사용하지 않는 것은 아니다. 무작위의 query도 함께 사용하여 다양한 객체를 포괄적으로 탐지할 수 있도록 하였다.
+3. CDN Queries
+   - denoising한 query들도 함께 포함한다.
+  
+다양한 query를 섞어 사용함으로써, 모델은 초기부터 안정적인 학습이 가능해졌다.
+
+#### 3. Look Forward Twice
+이 내용 중에 가장 간단한 내용이다. DETR은 하나의 디코더 블록을 고려하지만, DINO는 2개의 블록을 동시에 고려하여 예측하는구조를 형성한다.
+![alt text](./Img/image17.png)
+
+이를 통해서 객체의 위치나 모양 정보가 계층적으로 더 정확히 보정된다는 장점이 있고, 더 넓은 정보를 활용할 수 있게 된다는 장점이 있다.
+
+### 특징 및 장단점
+[장점]
+- DETR 대비 훨씬 빠른 학습
+- 높은 mAP (SOTA 수준)
+- 안정적인 training
+- multi-scale 잘 처리
+[단점]
+- 여전히 구조 복잡 (튜닝 요소 많음)
+- YOLO 대비 inference 속도 느림
+- small dataset에서는 과적합 가능
+
+---
+
+## RT-DETR
+### 논문 정보
+> - 논문 제목 : RT-DETR: DETRs Beat YOLOs on Real-time Object Detection
+> - 모델 이름 : RT-DETR
+> - 발표 연도 : 2023 (last revised 2024)
+> - 한줄 요약 : Transformer 기반 detection을 YOLO 수준의 속도로 만든 실시간 DETR
+
+### Network Architecture
+![alt text](./Img/image18.png)
+제안된 RT-DETR은 백본, 하이브리드 인코더, 보조 예측 헤드가 있는 Transformer 디코더로 구성된다.
+ 1. 백본의 마지막 세 단계의 출력 feature {S3, S4, S5}를 인코더에 대한 입력으로 활용
+ 2. 하이브리드 인코더는 스케일 내 상호 작용과 스케일 간 융합을 통해 멀티스케일 feature를 일련의 이미지 feature로 변환
+ 3. IoU-aware query selection은 디코더에 대한 초기 object query 역할을 하기 위해 인코더 출력 시퀀스에서 고정된 개수의 이미지 feature를 선택하는 데 사용
+ 4. 마지막으로 보조 예측 헤드가 있는 디코더는 object query를 반복적으로 최적화하여 상자와 신뢰도 점수를 생성
+
+### Main idea
+#### 1. Efficient Hybrid Encoder
+[Computational bottleneck analysis]
+
+Deformable-DETR은 학습 수렴을 가속화하고 성능을 향상시키기 위해 멀티스케일 feature 도입을 제안하고 계산을 줄이기 위한 deformable attention 메커니즘을 제안하였지만 attention 메커니즘의 개선으로 계산 오버헤드가 줄어들었음에도 불구하고 입력 시퀀스의 길이가 급격히 증가하면 여전히 인코더가 계산 병목 현상을 일으키고 DETR의 실시간 구현을 방해한다. Deformable-DETR에서 인코더는 GFLOP의 49%를 차지하지만 AP의 11%만 기여한다. 이러한 병목을 극복하기 위해서 우선 멀티 스케일 트랜스포머 인코더의 computational redundancy 계산 중복을 분석한다. 
+
+직관적으로, 객체에 대한 풍부한 semantic information을 포함하는 high-level features 고수준 특징은 low-level features 저수준 피쳐에서 추출되므로 concatenated multi-scale 피쳐들의 피쳐 상호작용은 중복을 포함한다. 따라서, 저자들은 simulatenous 동시적인 intra-scale 스케일 내 및 cross-scale 스케일 간 피쳐 상호작용이 비효율적임을 증명하기 위해 다양한 유형의 인코더를 갖는 a set of variants 변형 세트를 설계하며 이는 아래 Figure 3에 묘사된다.
+
+특히 RT-DETR에서 사용된 더 작은 크기의 데이터 리더와 더 가벼운 디코더를 갖춘 DINO-Deformable-R50을 실험에 사용한다. 먼저 DINO-Deformable-R50에서 변형 A로 다중 스케일 트랜스포머 인코더를 제거한다. 그런 다음, 다양한 유형의 인코더를 삽입하여 A를 기반으로 하는 일련의 변형을 생성한다.
+
+![alt text](./Img/image19.png)
+
+1. A->B
+   - Variant A에 single scale Transformer encoder (SSE)를 삽입한다. Intra-scale는 피쳐 멀티 스케일 피쳐들의 상호작용을  위한 동일한 인코더를 공유하며 concatenate해서 결과를 출력한다.
+2. B->C
+   - Variant C는 변형 B에 cross-scale feature fusion을 삽입하여 Multi scale Transformer encoder  (MSE)에 concatenated 피쳐를 넣어서 intra-scale와 cross-scale 피쳐 상호작용을 동시에 수행한다. 
+3. C->D
+   - Variant D는 intra-scale 상호작용과 cross-scale fusion을 서로 분리하며, intra-scale에는 single-scale Transformer를, cross-scale fusion (CSF) 에는 PANet-style을 적용한다. 
+4. D->E
+   - Variant E는 Efficient hybrid encoder를 적용한다. 
+
+![alt text](./Img/image20.png)
+
+
+[Hybrid design]
+
+Efficient Hybrid Encoder는 다음의 2개의 모듈로 구성된다, Attention-based Intra-scale Feature Interaction (AIFI)와 CNN-based Cross-scale Feature Fusion (CCFF)다. 
+
+1. Attention-based Intra-scale Feature Interaction (AIFI)
+- 싱글 스케일 트랜스포머 인코더를 사용하여 S5에서만 intra-scale 상호작용을 수행함으로써 variant D에 기반한 계산 비용을 더욱 줄인 것
+  - 더 풍부한 의미 개념을 가진 고수준 피쳐에 셀프 어텐션 연산을 적용하면 개념적 개체 간의 연결을 포착하여 후속 모듈에서 객체의 위치 지정 및 인식을 용이하게 만듬
+2. CNN-based Cross-scale Feature Fusion (CCFF)
+-  CNN 계층으로 구성된 여러 개의 fusion blocks를 fusion path에 삽입하는 cross-scale fusion 모듈을 기반으로 최적화된다.
+- Fusion blocks의 역할은 두 개의 인접한 스케일 피쳐를 새로운 피쳐로 합성하는 것이며, 그 구조는 아래 Figure 5
+  - fusion blocks 은 채널 수를 조정하기 위해 두 개의 1 × 1 컨볼루션을 포함
+  - RepConv로 구성된 N개의 RepBlock이 feature fusion에 사용되고, 두 fusion path는 element-wise addition을 통해 합성
+
+  ![alt text](./Img/image21.png)
+
+#### 2. Uncertainty-minimal Query Selection
+DETR에서 객체 질의 최적화의 어려움을 줄이기 위해, 여러 후속 연구를 토대로 한 질의 선택 기법을 제안한다. 이전 연구들은 공통적으로 confidence scores 신뢰도 점수를 사용하여 인코더에서 상위 K개의 피쳐를 선택하여 object queries 객체 질의 (또는 position quereis 위치 질의)로 초기화한다. 신뢰도 점수는 피쳐가 foreground objects 전경 객체를 포함할 가능성을 나타낸다. 그럼에도 불구하고 탐지기들은 객체의 category 범주와 location 위치를 동시에 모델링해야 하며, 이 두 가지는 피쳐의 품질을 결정한다. 따라서 피쳐의 performance score 성능 점수는 분류 및 위치 추정과 공동으로 상관관계가 있는 latent variable 잠재 변수다. 분석 결과 현재의 쿼리 선택은 선택된 특징으로 하여금 상당한 수준의 unceratainty 불확실성을 초래하여 디코더의 최적이 아닌 초기화를 초래하고 탐지기의 성능을 저해하는 결과를 가져온다.
+
+이 문제를 해결하기 위해, 본 연구에서는 불확실성 최소 질의 선택 기법을 제안한다. 이는 인코더 피쳐의 공동 잠재 변수를 모델링하기 위해 episdemic uncertainty 인식적 불확실성을 명시적으로 구성하고 최적화하여 디코더에 고품질의 쿼리를 제공한다. 구체적으로 피쳐 불확실성 U는 아래 식 (2)에서 predicted distribution of localization 예측 지역화의 분포 P와 predicted distribution of classificaion 예측 분류 분포 C의 간의 discrepancy 불일치로 정의된다.
+
+질의의 불확실성을 최소화하기 위해, 식 (2)를 loss 함수에 통합하여 식 (3)을 만든다. 이는 그라디언트 기반의 손실 함수 최소화로 최적화 한다
+![alt text](./Img/image22.png)
+
+#### 3. Scaled RT-DETR
+RT-DETR의 확장 가능한 버전을 제공하기 위해 ResNet 백본을 HGNetv2로 대체한다. 깊이 multiplier와 너비 multiplier를 사용하여 백본과 하이브리드 인코더를 함께 확장한다. 따라서 파라미터와 FPS의 수가 다른 두 가지 버전의 RT-DETR을 얻는다. 하이브리드 인코더의 경우 CCFM의 RepBlock 수와 인코더의 임베딩 크기를 각각 조정하여 깊이 multiplier와 너비 multiplier를 제어한다. 다양한 스케일의 RT-DETR은 균일한 디코더를 유지한다.
+
+### 특징 및 장단점
+[장점]
+- 실시간 detection 가능 (YOLO급)
+- NMS 필요 없음 (DETR 장점 유지)
+- 정확도 vs 속도 균형 좋음
+
+[단점]
+- 구조 이해 난이도 있음
+- extreme small object는 여전히 약점
