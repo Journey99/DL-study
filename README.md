@@ -25,10 +25,12 @@
 
 ### Segmentation
 - UNet
+- nnUNet
 - DeepLabv3+
 - SegFormer
 - Mask2Former
 - SAM
+- SAM3
 
 ### OCR
 
